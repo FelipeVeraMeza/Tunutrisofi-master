@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev:vite": "vite",
-    "dev:correo": "node correo.mjs",
+    "dev:correo": "node server.mjs",
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:correo\"",
     "build": "vite build",
     "preview": "vite preview",
@@ -34,6 +34,7 @@
     "express": "^5.2.1",
     "framer-motion": "^11.15.0",
     "lucide-react": "^0.469.0",
+    "multer": "^2.1.1",
     "nodemailer": "^8.0.7",
     "pocketbase": "^0.25.0",
     "react": "^18.3.1",
