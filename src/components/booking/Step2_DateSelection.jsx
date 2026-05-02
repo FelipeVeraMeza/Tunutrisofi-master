@@ -5,10 +5,39 @@ import { es } from 'date-fns/locale';
 
 const Step2_DateSelection = ({ selectedDate, setSelectedDate }) => {
   const disabledDays = (date) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    // Disable weekends (0 = Sunday, 6 = Saturday) and past dates
-    return date.getDay() === 0 || date.getDay() === 6 || date < today;
+    // 1. Obtenemos la fecha y hora exacta de ESTE momento
+    const now = new Date();
+    const currentHour = now.getHours(); // Nos da la hora del 0 al 23
+    
+    // 2. Creamos una variable que represente el inicio del día de hoy (00:00:00)
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // REGLA A: Bloquear fines de semana (0 = Domingo, 6 = Sábado)
+    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+
+    // REGLA B: Bloquear días del pasado (ayer, la semana pasada, etc)
+    const isPast = date < today;
+
+    // REGLA C: Regla de las 18:00 hrs
+    // Comprobamos si el cuadro del calendario que se está pintando es el día de HOY
+    const isToday = date.getTime() === today.getTime();
+    // Si es HOY y ya son las 18:00 (o más tarde), lo bloqueamos
+    const blockToday = isToday && currentHour >= 18;
+
+    /* NOTA: Si en Nutrisofi NO atiendes urgencias y quieres obligar a que te 
+      agenden con 24 horas de aviso mínimo (ej. si son las 18:00, bloquear HOY y MAÑANA),
+      solo debes descomentar las siguientes líneas:
+      
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const isTomorrow = date.getTime() === tomorrow.getTime();
+      const blockTomorrow = isTomorrow && currentHour >= 18;
+      
+      Y cambiar el return de abajo por: return isWeekend || isPast || blockToday || blockTomorrow;
+    */
+
+    // Finalmente, el calendario desactivará el día si cumple cualquiera de estas reglas
+    return isWeekend || isPast || blockToday;
   };
 
   return (

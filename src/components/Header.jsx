@@ -114,13 +114,20 @@ const Header = () => {
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild className="cursor-pointer">
-                      <Link to="/profile" className="flex items-center w-full">
-                        <User className="mr-2 h-4 w-4" />
-                        <span>Mi Perfil</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
+                    
+                    {/* 👇 AQUÍ APLICAMOS LA CONDICIÓN PARA OCULTAR MI PERFIL EN PC 👇 */}
+                    {!isAdmin && (
+                      <>
+                        <DropdownMenuItem asChild className="cursor-pointer">
+                          <Link to="/profile" className="flex items-center w-full">
+                            <User className="mr-2 h-4 w-4" />
+                            <span>Mi Perfil</span>
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
+
                     <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-600">
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Cerrar Sesión</span>
@@ -189,14 +196,17 @@ const Header = () => {
             <div className="pt-4 border-t border-gray-100 flex flex-col gap-3">
               {isAuthenticated ? (
                 <>
-                  <Link
-                    to="/profile"
-                    className="flex items-center gap-2 py-2 text-base font-medium text-gray-700 hover:text-primary"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <User className="h-5 w-5" />
-                    Mi Perfil ({currentUser?.nombre?.split(' ')[0]})
-                  </Link>
+                  {/* 👇 AQUÍ APLICAMOS LA CONDICIÓN PARA OCULTAR MI PERFIL EN CELULAR 👇 */}
+                  {!isAdmin && (
+                    <Link
+                      to="/profile"
+                      className="flex items-center gap-2 py-2 text-base font-medium text-gray-700 hover:text-primary"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <User className="h-5 w-5" />
+                      Mi Perfil ({currentUser?.nombre?.split(' ')[0]})
+                    </Link>
+                  )}
 
                   {/* BOTÓN MÓVIL OCULTO PARA ADMIN */}
                   {!isAdmin && (

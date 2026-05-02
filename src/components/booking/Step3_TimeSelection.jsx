@@ -1,34 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient.js';
 import { Button } from '@/components/ui/button.jsx';
-import { Loader2, Clock } from 'lucide-react';
+import { Loader2, Clock, CalendarDays } from 'lucide-react';
 
 const Step3_TimeSelection = ({ selectedDate, selectedTime, setSelectedTime, selectedType }) => {
   const [availableSlots, setAvailableSlots] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (selectedDate && selectedType) {
-      fetchAvailability();
-    }
-  }, [selectedDate, selectedType]);
-
-  // 1. CONFIGURACIÓN DE DURACIONES (Ajusta los minutos según tu servicio)
-  const getDurationMinutes = (tipo) => {
-    if (tipo === 'Presencial') return 120; // 2 horas
-    if (tipo === 'Online') return 60;      // 1 hora
-    if (tipo === 'Control/Seguimiento') return 30; // 30 minutos
-    return 60; // Por defecto
+  // --- 1. DURACIONES EXACTAS SEGÚN TU TABLA ---
+  const getDuration = (tipo) => {
+    const t = tipo?.toLowerCase() || '';
+    if (t.includes('presencial')) return 120; // 2 horas
+    if (t.includes('online')) return 60;      // 1 hora
+    if (t.includes('control')) return 30;     // 30 minutos
+    return 60;
   };
+
+  // --- 2. CONFIGURACIÓN DE LA JORNADA ---
+  const SETTINGS = {
+    startMin: 9 * 60,     // 09:00 AM
+    endLimit: 18 * 60,    // 18:00 PM (Última hora para empezar una cita)
+    dayFinish: 20 * 60,   // 20:00 PM (Hora máxima para que termine la última cita)
+    lunchStart: 14 * 60,  // 14:00 PM
+    lunchEnd: 15 * 60     // 15:00 PM
+  };
+
+  useEffect(() => {
+    if (selectedDate && selectedType) fetchAvailability();
+  }, [selectedDate, selectedType]);
 
   const fetchAvailability = async () => {
     setLoading(true);
     try {
-      // Ajuste de zona horaria para Chile
       const fechaLocal = new Date(selectedDate.getTime() - (selectedDate.getTimezoneOffset() * 60000));
       const dateStr = fechaLocal.toISOString().split('T')[0];
 
-      // Traer las reservas de ese día (que no estén rechazadas)
+      // BUSCAR RESERVAS (Asegúrate de haber ejecutado el SQL de permisos en Supabase)
       const { data: reservas, error } = await supabase
         .from('reservas')
         .select('hora, tipo_consulta')
@@ -37,88 +44,90 @@ const Step3_TimeSelection = ({ selectedDate, selectedTime, setSelectedTime, sele
 
       if (error) throw error;
 
-      const durationNeeded = getDurationMinutes(selectedType);
-      
-      // Convertir las citas existentes a rangos de minutos ocupados
-      const occupiedRanges = (reservas || []).map(res => {
+      // Definir bloques ya ocupados (Sin buffers, solo tiempo real)
+      const busyRanges = (reservas || []).map(res => {
         const [h, m] = res.hora.split(':').map(Number);
-        const startMin = h * 60 + m;
-        const resDuration = getDurationMinutes(res.tipo_consulta);
-        return { start: startMin, end: startMin + resDuration };
+        const start = h * 60 + m;
+        const duration = getDuration(res.tipo_consulta);
+        return { start, end: start + duration };
       });
 
+      // Bloque de almuerzo (14:00 - 15:00)
+      busyRanges.push({ start: SETTINGS.lunchStart, end: SETTINGS.lunchEnd });
+
       const slots = [];
-      const startHour = 9;  // Hora de apertura (09:00 AM)
-      const endHour = 19;   // Hora de cierre (07:00 PM)
-      
-      // Variables del horario de colación
-      const lunchStart = 14 * 60; // 14:00 convertido a 840 minutos
-      const lunchEnd = 15 * 60;   // 15:00 convertido a 900 minutos
+      const durationNeeded = getDuration(selectedType);
+      const now = new Date();
+      const isToday = selectedDate.toDateString() === now.toDateString();
+      const currentMinNow = now.getHours() * 60 + now.getMinutes();
 
-      // Bucle en intervalos de 30 minutos
-      for (let h = startHour; h < endHour; h++) {
-        for (let m = 0; m < 60; m += 30) {
-          const currentStart = h * 60 + m;
-          const currentEnd = currentStart + durationNeeded;
+      // GENERAR OPCIONES (Desde las 09:00 hasta las 18:00 máximo)
+      for (let min = SETTINGS.startMin; min <= SETTINGS.endLimit; min += 30) {
+        const slotStart = min;
+        const slotEnd = min + durationNeeded;
 
-          // REGLA A: No agendar si la cita termina después de tu hora de cierre
-          if (currentEnd > endHour * 60) continue;
+        // Regla A: No horas pasadas (si es hoy)
+        if (isToday && slotStart <= currentMinNow + 10) continue;
 
-          // REGLA B: Protección estricta del almuerzo (14:00 a 15:00)
-          // La cita es inválida si EMPIEZA ANTES de las 15:00 Y TERMINA DESPUÉS de las 14:00
-          const overlapsLunch = currentStart < lunchEnd && currentEnd > lunchStart;
-          if (overlapsLunch) continue;
+        // Regla B: La cita no puede terminar después de las 20:00
+        if (slotEnd > SETTINGS.dayFinish) continue;
 
-          // REGLA C: Verificar que no choque con citas ya agendadas
-          const overlapsExisting = occupiedRanges.some(range => {
-            return currentStart < range.end && currentEnd > range.start;
-          });
-          if (overlapsExisting) continue;
+        // Regla C: Cálculo de traslape matemático (Profesional)
+        // Solo mostramos la hora si el bloque COMPLETO está libre
+        const isOverlap = busyRanges.some(range => {
+          return slotStart < range.end && slotEnd > range.start;
+        });
 
-          // Si pasó todas las reglas, agregamos la hora a la lista
-          const hourStr = h.toString().padStart(2, '0');
-          const minStr = m.toString().padStart(2, '0');
-          slots.push(`${hourStr}:${minStr}`);
-        }
+        if (isOverlap) continue;
+
+        // Si el hueco es perfecto, agregamos el botón
+        const hh = Math.floor(min / 60).toString().padStart(2, '0');
+        const mm = (min % 60).toString().padStart(2, '0');
+        slots.push(`${hh}:${mm}`);
       }
 
       setAvailableSlots(slots);
-    } catch (error) {
-      console.error('Error cargando disponibilidad:', error);
+    } catch (err) {
+      console.error("Error:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
-  }
-
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900">Selecciona tu horario</h2>
-        <p className="text-gray-500 mt-2">Horarios disponibles para {selectedDate?.toLocaleDateString()}</p>
+      <div className="text-center p-6 bg-primary/5 rounded-3xl border border-primary/10">
+        <h2 className="text-2xl font-bold text-gray-900 flex items-center justify-center gap-2">
+          <CalendarDays className="text-primary h-6 w-6" />
+          Selecciona tu horario
+        </h2>
+        <p className="text-gray-500 mt-2 font-medium">
+          Cupos para <span className="text-primary font-bold">{selectedType}</span> el {selectedDate?.toLocaleDateString()}
+        </p>
       </div>
 
-      {availableSlots.length === 0 ? (
-        <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+      {loading ? (
+        <div className="flex flex-col items-center py-20">
+          <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+          <p className="text-gray-400 font-medium">Consultando agenda...</p>
+        </div>
+      ) : availableSlots.length === 0 ? (
+        <div className="text-center py-10 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
           <Clock className="h-10 w-10 text-gray-400 mx-auto mb-3" />
-          <p className="text-gray-600">No hay horarios disponibles para este día.</p>
-          <p className="text-sm text-gray-500">Intenta seleccionando otra fecha en el paso anterior.</p>
+          <p className="text-gray-600 font-medium">No hay cupos disponibles hoy.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {availableSlots.map((time) => (
             <Button
               key={time}
               type="button"
               variant={selectedTime === time ? 'default' : 'outline'}
               onClick={() => setSelectedTime(time)}
-              className={`py-6 rounded-xl text-lg transition-all ${
+              className={`py-8 rounded-2xl text-xl font-bold transition-all duration-300 ${
                 selectedTime === time 
-                  ? 'bg-primary text-white shadow-md border-primary' 
-                  : 'border-gray-200 text-gray-700 hover:border-primary hover:text-primary'
+                  ? 'bg-primary text-white shadow-lg scale-105 ring-2 ring-primary ring-offset-2' 
+                  : 'border-gray-200 text-gray-700 hover:border-primary hover:text-primary hover:bg-white shadow-sm'
               }`}
             >
               {time}
