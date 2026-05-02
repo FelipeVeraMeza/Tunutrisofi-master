@@ -5,12 +5,11 @@ import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 
 dotenv.config();
-
 const app = express();
 
-// 1. CONFIGURACIÓN DE CORS: Vital para que Vercel no se bloquee
+// CORS para que Vercel pueda entrar
 app.use(cors({
-  origin: '*', // Permite que cualquier sitio le hable
+  origin: '*',
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }));
@@ -18,45 +17,41 @@ app.use(cors({
 app.use(express.json());
 const upload = multer();
 
-// 2. RUTA DE SALUD: Para que Railway sepa que estás vivo
+// RUTA DE SALUD (Para que Railway vea que el cartero está vivo)
 app.get('/', (req, res) => {
   res.status(200).send('🚀 Cartero de Nutrisofi ONLINE');
 });
 
-// 3. CONFIGURACIÓN DE GMAIL
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_NUTRISOFI,
-    pass: process.env.PASS_NUTRISOFI, // Tu clave de 16 letras
-  },
-});
-
-// 4. RUTA DE ENVÍO
+// TU RUTA DE ENVÍO
 app.post('/api/notificar-documento', upload.single('file'), async (req, res) => {
   const { email, nombrePaciente, nombreArchivo } = req.body;
   const file = req.file;
-
-  if (!file) return res.status(400).json({ error: 'Falta el archivo' });
+  if (!file) return res.status(400).send('No hay archivo');
 
   try {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_NUTRISOFI,
+        pass: process.env.PASS_NUTRISOFI,
+      },
+    });
+
     await transporter.sendMail({
       from: `"Tu Nutri Sofi" <${process.env.EMAIL_NUTRISOFI}>`,
       to: email,
       subject: `Nuevo documento: ${nombreArchivo} 🍎`,
-      html: `<h2>¡Hola ${nombrePaciente}!</h2><p>Te envío adjunto tu: <b>${nombreArchivo}</b>.</p>`,
+      html: `<h2>¡Hola ${nombrePaciente}!</h2><p>Te envío tu archivo adjunto.</p>`,
       attachments: [{ filename: nombreArchivo, content: file.buffer }]
     });
-    console.log(`✅ Mail enviado a ${email}`);
     res.status(200).json({ success: true });
   } catch (error) {
-    console.error('❌ Error:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// 5. PUERTO DINÁMICO: Crítico para Railway
+// PUERTO DINÁMICO (Railway usará el 8080 que sale en tu captura)
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Servidor en puerto ${PORT}`);
+  console.log(`🚀 Servidor escuchando en puerto ${PORT}`);
 });
