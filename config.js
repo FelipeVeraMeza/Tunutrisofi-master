@@ -1,5 +1,8 @@
-const IP_PUBLICA = 'tunutrisofi-production.up.railway.app'; 
+// config.js (En la raíz)
 
-//export const API_BASE_URL = 'http://localhost:4000/api';
-export const API_BASE_URL = `https://${IP_PUBLICA}/api`;
+// COMENTA la de Railway para probar en tu casa
+export const API_BASE_URL = 'https://tunutrisofi-production.up.railway.app/api';
+
+// ACTIVA esta para tu PC:
+export const API_BASE_URL = 'http://localhost:4000/api';
 export const FRONTEND_URL = `https://tunutrisofi.vercel.app`;

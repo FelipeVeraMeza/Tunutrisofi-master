@@ -13,7 +13,7 @@ import {
   FileUp, X, Search, CalendarDays, Mail
 } from 'lucide-react';
 
-// Importamos la configuración del backend
+// Importación para cuando config.js está en la RAÍZ (donde está package.json)
 import { API_BASE_URL } from "../../config.js";
 
 const AdminPage = () => {
