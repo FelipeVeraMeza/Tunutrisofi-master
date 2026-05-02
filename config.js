@@ -1,4 +1,4 @@
-const IP_PUBLICA = 'https://nutrisofi.onrender.com'; 
+const IP_PUBLICA = 'https://tunutrisofi-production.up.railway.app'; 
 
 // No le agregues https:// al principio aquí
 export const API_BASE_URL = `${IP_PUBLICA}/api`; 
