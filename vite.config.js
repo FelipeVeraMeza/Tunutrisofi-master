@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react'; // o el que uses
+import react from '@vitejs/plugin-react';
 import path from 'path';
 
 export default defineConfig({
@@ -9,16 +9,5 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  // --- ESTO ARREGLA EL ERROR DE RAILWAY ---
-  server: {
-    allowedHosts: [
-      'tunutrisofi-production.up.railway.app',
-      '.localhost' // permite también localhost
-    ]
-  },
-  preview: {
-    allowedHosts: [
-      'tunutrisofi-production.up.railway.app'
-    ]
-  }
+  // Limpiamos la configuración de servidor para que Vercel no se confunda
 });
