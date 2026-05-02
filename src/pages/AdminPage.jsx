@@ -133,16 +133,18 @@ const AdminPage = () => {
         });
         if (dbError) throw dbError;
 
-        // 5. ENVIAR AL CARTERO (Backend en Node.js)
-        const formData = new FormData();
-        formData.append('file', file); // El archivo real adjunto
-        formData.append('email', selectedPatient.email);
-        formData.append('nombrePaciente', selectedPatient.nombre);
-        formData.append('nombreArchivo', file.name);
+        // 5. ENVIAR AL CARTERO (Ahora integrado en Vercel)
+        const payload = {
+          email: selectedPatient.email,
+          nombrePaciente: selectedPatient.nombre,
+          nombreArchivo: file.name,
+          fileUrl: publicUrl // Le enviamos el link de Supabase
+        };
 
-        const res = await fetch(`${API_BASE_URL}/notificar-documento`, {
+        const res = await fetch('/api/notificar', {
           method: 'POST',
-          body: formData, // No necesita headers, FormData los pone solo
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
         });
 
         if (!res.ok) throw new Error("Error al enviar el correo");
