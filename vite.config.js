@@ -1,20 +1,24 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import path from 'path'
-import { fileURLToPath } from 'url'
-
-// Creamos el equivalente a __dirname para ES Modules
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react'; // o el que uses
+import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      '@': path.resolve(__dirname, './src'),
     },
   },
+  // --- ESTO ARREGLA EL ERROR DE RAILWAY ---
   server: {
-    port: 3000,
+    allowedHosts: [
+      'tunutrisofi-production.up.railway.app',
+      '.localhost' // permite también localhost
+    ]
+  },
+  preview: {
+    allowedHosts: [
+      'tunutrisofi-production.up.railway.app'
+    ]
   }
-})
+});

@@ -4,15 +4,15 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev:vite": "vite",
-    "dev:correo": "node server.mjs",
-    "dev": "concurrently \"npm run dev:vite\" \"npm run dev:correo\"",
-    "build": "vite build",
-    "preview": "vite preview",
-    "start": "vite preview --outDir ../../dist/apps/web --host :: --port 3000",
-    "lint": "eslint . --quiet",
-    "lint:warn": "eslint ."
-  },
+  "dev:vite": "vite",
+  "dev:correo": "node server.mjs",
+  "dev": "concurrently \"npm run dev:vite\" \"npm run dev:correo\"",
+  "build": "vite build",
+  "preview": "vite preview",
+  "start": "vite preview --host --port 3000", 
+  "lint": "eslint . --quiet",
+  "lint:warn": "eslint ."
+},
   "dependencies": {
     "@radix-ui/react-accordion": "^1.1.2",
     "@radix-ui/react-alert-dialog": "^1.1.4",
