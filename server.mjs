@@ -1,19 +1,39 @@
-// server.mjs
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 
+// Cargar variables de entorno (.env)
 dotenv.config();
 
 const app = express();
-app.use(cors()); // Permite que tu web se comunique con este servidor
+
+// =====================================================================
+// ⚙️ CONFIGURACIÓN DE SEGURIDAD Y RECEPCIÓN
+// =====================================================================
+// Permite que tu web en Vercel se comunique sin bloqueos (CORS)
+app.use(cors({
+  origin: '*', 
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type']
+}));
+
 app.use(express.json());
 
-const upload = multer(); // Para recibir el archivo en memoria
+// Multer se encarga de atrapar el archivo que viene desde la web
+const upload = multer();
 
-// Configuración de Nodemailer (tu motor que ya funciona)
+// =====================================================================
+// 🚀 RUTA DE SALUD (Para que Railway sepa que estamos vivos)
+// =====================================================================
+app.get('/', (req, res) => {
+  res.status(200).send('✅ Cartero de Nutrisofi ONLINE y listo para entregar.');
+});
+
+// =====================================================================
+// 📧 CONFIGURACIÓN DEL MOTOR DE CORREOS (NODEMAILER)
+// =====================================================================
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -22,41 +42,64 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// RUTA MÁGICA: Recibe el archivo y lo manda por mail
+// =====================================================================
+// 🎯 RUTA PRINCIPAL: RECIBE EL ARCHIVO Y LO ENVÍA
+// =====================================================================
 app.post('/api/notificar-documento', upload.single('file'), async (req, res) => {
   const { email, nombrePaciente, nombreArchivo } = req.body;
   const file = req.file;
 
+  // Validación: Si no llegó el archivo, avisar del error
+  if (!file) {
+    console.error(`❌ Error: No llegó ningún archivo para ${email}`);
+    return res.status(400).json({ error: 'No se recibió ningún archivo.' });
+  }
+
+  console.log(`⏳ Procesando envío para: ${nombrePaciente} (${email})...`);
+
   try {
+    // Estructura del correo (Similar a tu script, pero estilo Nutrisofi)
     const mailOptions = {
       from: `"Tu Nutri Sofi" <${process.env.EMAIL_NUTRISOFI}>`,
       to: email,
-      subject: `Nuevo documento: ${nombreArchivo} 🍎`,
+      subject: `Nuevo documento disponible: ${nombreArchivo} 🍎`,
       html: `
-        <div style="font-family: sans-serif; border: 1px solid #FF6B9D; padding: 20px; border-radius: 10px;">
+        <div style="font-family: Arial, sans-serif; border: 1px solid #FF6B9D; padding: 20px; border-radius: 10px; max-width: 600px;">
           <h2 style="color: #FF6B9D;">¡Hola ${nombrePaciente}!</h2>
-          <p>Te envío adjunto el documento: <strong>${nombreArchivo}</strong>.</p>
-          <p>También puedes encontrarlo siempre disponible en tu perfil de <a href="https://tunutrisofi.cl">tunutrisofi.cl</a>.</p>
+          <p>Junto con saludar, te informo que he preparado un nuevo documento para ti.</p>
+          <p>Te envío adjunto: <strong>${nombreArchivo}</strong>.</p>
           <br>
-          <p>Un abrazo,<br>Sofía Cordero</p>
+          <p>Recuerda que también puedes encontrarlo siempre disponible en tu perfil privado en <a href="https://tunutrisofi.cl" style="color: #FF6B9D;">tunutrisofi.cl</a>.</p>
+          <br>
+          <p>Un abrazo,<br><strong>Sofía Cordero</strong><br>Nutricionista</p>
         </div>
       `,
-      attachments: [{
-        filename: nombreArchivo,
-        content: file.buffer
-      }]
+      attachments: [
+        {
+          filename: nombreArchivo,
+          content: file.buffer // Aquí va el archivo real atrapado por Multer
+        }
+      ]
     };
 
+    // Enviar el correo
     await transporter.sendMail(mailOptions);
-    console.log(`✅ Correo enviado a: ${email}`);
-    res.status(200).json({ success: true });
+    
+    console.log(`✅ CORREO ENVIADO EXITOSAMENTE A: ${email}`);
+    res.status(200).json({ success: true, message: 'Correo enviado' });
+
   } catch (error) {
-    console.error('❌ Error enviando mail:', error);
+    console.error(`❌ ERROR AL ENVIAR a ${email}:`, error.message);
     res.status(500).json({ error: 'Fallo al enviar el correo' });
   }
 });
 
-const PORT = 4000;
-app.listen(PORT, () => {
-  console.log(`🚀 Cartero de Nutrisofi activo en http://localhost:${PORT}`);
+// =====================================================================
+// 🔌 ENCENDIDO DEL SERVIDOR (CRÍTICO PARA RAILWAY)
+// =====================================================================
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log("==================================================");
+  console.log(`🚀 SERVIDOR ACTIVO ESCUCHANDO EN PUERTO ${PORT}`);
+  console.log("==================================================");
 });
