@@ -35,11 +35,17 @@ app.get('/', (req, res) => {
 // 📧 CONFIGURACIÓN DEL MOTOR DE CORREOS (NODEMAILER)
 // =====================================================================
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // Usa seguridad SSL
   auth: {
     user: process.env.EMAIL_NUTRISOFI,
     pass: process.env.PASS_NUTRISOFI,
   },
+  // Esto fuerza a usar conexiones estables y evita timeouts en la nube
+  tls: {
+    rejectUnauthorized: false
+  }
 });
 
 // =====================================================================
