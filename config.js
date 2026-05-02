@@ -1,8 +1,9 @@
-// config.js (En la raíz)
+// config.js
 
-// COMENTA la de Railway para probar en tu casa
+// 1. Para PRODUCCIÓN (Railway/Vercel) - ESTA DEBE ESTAR ACTIVA
 export const API_BASE_URL = 'https://tunutrisofi-production.up.railway.app/api';
 
-// ACTIVA esta para tu PC:
-export const API_BASE_URL = 'http://localhost:4000/api';
-export const FRONTEND_URL = `https://tunutrisofi.vercel.app`;
+// 2. Para DESARROLLO (Localhost) - ESTA DEBE ESTAR COMENTADA (ANULADA)
+// export const API_BASE_URL = 'http://localhost:4000/api';
+
+export const FRONTEND_URL = 'https://tunutrisofi.vercel.app';
