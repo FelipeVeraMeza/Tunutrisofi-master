@@ -8,9 +8,9 @@ dotenv.config();
 
 const app = express();
 
-// 1. CONFIGURACIÓN DE CORS (Esto quita el error de "blocked by CORS")
+// 1. CORS Total (Sin restricciones para que Vercel entre siempre)
 app.use(cors({
-  origin: '*', // Permite que cualquier sitio (como Vercel) le hable
+  origin: '*',
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }));
@@ -26,34 +26,37 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// 2. LA RUTA EXACTA (Asegúrate que empiece con /api)
+// --- NUEVA RUTA DE PRUEBA (Para ver si el cartero vive) ---
+app.get('/', (req, res) => {
+  res.send('🚀 El cartero de Nutrisofi está despierto y escuchando!');
+});
+
+// 2. LA RUTA DE ENVÍO (Asegúrate que tenga /api al inicio)
 app.post('/api/notificar-documento', upload.single('file'), async (req, res) => {
-  console.log("📩 Petición recibida desde Vercel...");
-  
+  console.log("📩 Petición de correo recibida...");
   const { email, nombrePaciente, nombreArchivo } = req.body;
   const file = req.file;
 
-  if (!file) return res.status(400).json({ error: 'No se recibió el archivo' });
+  if (!file) {
+    return res.status(400).json({ error: 'No llegó el archivo al servidor' });
+  }
 
   try {
     await transporter.sendMail({
       from: `"Tu Nutri Sofi" <${process.env.EMAIL_NUTRISOFI}>`,
       to: email,
       subject: `Nuevo documento: ${nombreArchivo} 🍎`,
-      html: `<h2>¡Hola ${nombrePaciente}!</h2><p>Te adjunto tu archivo: <b>${nombreArchivo}</b>.</p>`,
+      html: `<h2>¡Hola ${nombrePaciente}!</h2><p>Te envío adjunto tu archivo.</p>`,
       attachments: [{ filename: nombreArchivo, content: file.buffer }]
     });
-    
-    console.log("✅ Mail enviado con éxito");
-    res.status(200).json({ success: true });
+    res.status(200).json({ success: true, message: 'Correo enviado' });
   } catch (error) {
-    console.error("❌ Error enviando mail:", error);
-    res.status(500).json({ error: error.message });
+    console.error('❌ Error Nodemailer:', error);
+    res.status(500).json({ error: 'Error interno al enviar mail' });
   }
 });
 
-// 3. PUERTO PARA RAILWAY
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Cartero activo en puerto ${PORT}`);
+  console.log(`🚀 Cartero de Nutrisofi activo en puerto ${PORT}`);
 });
